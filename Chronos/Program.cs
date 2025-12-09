@@ -1,3 +1,5 @@
+using Chronos.Application;
+
 namespace Chronos
 {
     public class Program
@@ -8,7 +10,8 @@ namespace Chronos
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
-
+            builder.Services.AddScoped<EventServices, EventServices>();
+            builder.Services.AddScoped<IEventRepository, InMemoryRepository>();
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
