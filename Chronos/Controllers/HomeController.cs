@@ -15,7 +15,8 @@ namespace Chronos.Controllers
 
         public IActionResult Index()
         {
-            return View();
+            //return View();
+            return RedirectToAction("Index", "Event");
         }
 
         public IActionResult Privacy()

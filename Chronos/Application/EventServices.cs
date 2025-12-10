@@ -166,21 +166,36 @@ namespace Chronos.Application
 
         public ApiResponse<bool> CheckOverlapEvent(Guid id, UpdateEventDto dto)
         {
-            IEnumerable<Event> events = _repo.GetEvent();
-            if (events.Where(x => x.Id != id
-             && x.EventStartAt < dto.EventStartAt && x.EventEndAt > dto.EventStartAt).Any())
-                return new ApiResponse<bool>
-                {
-                    Success = true,
-                    Message = "Overlapping event exist. Continue?",
-                    Data = true
-                };
+            //IEnumerable<Event> events = _repo.GetEvent();
+            //if (events.Where(x => x.Id != id
+            // && dto.EventStartAt < x.EventStartAt && dto.EventStartAt > x.EventEndAt && x.DeletedAt == null).Any())
+            //    return new ApiResponse<bool>
+            //    {
+            //        Success = true,
+            //        Message = "Overlapping event exist. Continue?",
+            //        Data = true
+            //    };
+
+            //return new ApiResponse<bool>
+            //{
+            //    Success = true,
+            //    Message = "",
+            //    Data = false
+            //};
+
+            var events = _repo.GetEvent()
+                .Where(x => x.Id != id && x.DeletedAt == null);
+
+            bool isOverlapping = events.Any(x =>
+                dto.EventStartAt < x.EventEndAt &&
+                dto.EventEndAt > x.EventStartAt
+            );
 
             return new ApiResponse<bool>
             {
                 Success = true,
-                Message = "",
-                Data = false
+                Message = isOverlapping ? "Overlapping event exists. Continue?" : "",
+                Data = !isOverlapping
             };
         }
 

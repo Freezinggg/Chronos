@@ -15,7 +15,7 @@ namespace Chronos.Controllers
 
         public IActionResult Index()
         {
-            return View();
+            return View("~/Views/Event/_CreateEventForm.cshtml");
         }
 
         [HttpPost("CreateEvent")]
@@ -25,21 +25,28 @@ namespace Chronos.Controllers
             return Json(result);
         }
 
-        [HttpGet]
-        public IActionResult GetEvents()
+        [HttpPost("CheckOverlapEvent")]
+        public IActionResult CheckOverlapEvent(Guid id, [FromBody] UpdateEventDto dto)
         {
-            var result = _eventServices.GetEvents();
+            var result = _eventServices.CheckOverlapEvent(id, dto);
             return Json(result);
         }
 
-        [HttpDelete]
+        [HttpGet("GetEvents")]
+        public IActionResult GetEvents(string? startDate, string? endDate)
+        {
+            var result = _eventServices.GetEvents(startDate, endDate);
+            return Json(result);
+        }
+
+        [HttpDelete("DeleteEvent")]
         public IActionResult DeleteEvent(Guid id)
         {
             var result = _eventServices.DeleteEvent(id);
             return Json(result);
         }
 
-        [HttpPut]
+        [HttpPut("UpdateEvent")]
         public IActionResult UpdateEvent(Guid id, [FromBody] UpdateEventDto dto)
         {
             var result = _eventServices.DeleteEvent(id);
