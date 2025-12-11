@@ -1,0 +1,208 @@
+﻿@{
+    ViewData["Title"] = "All Events";
+}
+
+<h2>All Events</h2>
+
+<div style="margin-bottom: 20px;">
+    <button class="btn btn-success" onclick="openCreateModal()">+ Create Event</button>
+</div>
+
+<table class="table table-striped" id="eventsTable">
+    <thead>
+        <tr>
+            <th>Event Name</th>
+            <th>Description</th>
+            <th>Notes</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Location</th>
+            <th>Reminder?</th>
+        </tr>
+    </thead>
+    <tbody id="eventsBody">
+        <tr>
+            <td colspan="7">Loading events...</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Modal -->
+<div class="modal fade" id="eventModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Event</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body" id="modalBody">
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        loadEvents();
+    });
+
+    function openCreateModal() {
+    document.getElementById("modalTitle").innerText = "Create Event";
+
+    fetch("/Event/CreatePartial")
+        .then(res => res.text())
+        .then(html => {
+            document.getElementById("modalBody").innerHTML = html;
+
+            attachEventFormListener();
+
+            new bootstrap.Modal(document.getElementById("eventModal")).show();
+        });
+    }
+
+    function openEditModal(eventId) {
+        document.getElementById("modalTitle").innerText = "Edit Event";
+
+        fetch(`/Event/EditPartial/${eventId}`)
+            .then(res => res.text())
+            .then(html => {
+                document.getElementById("modalBody").innerHTML = html;
+
+                attachEventFormListener();
+
+                new bootstrap.Modal(document.getElementById("eventModal")).show();
+            });
+    }
+
+    async function loadEvents() {
+        const tableBody = document.getElementById("eventsBody");
+
+        try {
+            const response = await fetch("/Event/GetEvents");
+
+            if (!response.ok) {
+                tableBody.innerHTML = `
+                    <tr><td colspan="7">Failed to load events (Error ${response.status})</td></tr>
+                `;
+                return;
+            }
+
+            const result = await response.json();
+
+            console.log("API result:", result);
+
+            const events = Array.isArray(result)
+                ? result
+                : result.data ?? result.events ?? [];
+
+
+            if (!events || events.length === 0) {
+                tableBody.innerHTML = `
+                    <tr><td colspan="7">No events found.</td></tr>
+                `;
+                return;
+            }
+
+            tableBody.innerHTML = "";
+
+            events.forEach(ev => {
+                const row = `
+                    <tr>
+                        <td>${ev.eventName}</td>
+                        <td>${ev.eventDescription ?? "-"}</td>
+                        <td>${ev.eventNotes ?? "-"}</td>
+                        <td>${formatDate(ev.eventStartAt)}</td>
+                        <td>${formatDate(ev.eventEndAt)}</td>
+                        <td>${ev.location ?? "-"}</td>
+                        <td>${ev.hasReminder ? "Yes" : "No"}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="openEditModal('${ev.id}')">Edit</button>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" onclick="deleteEvent('${ev.id}')">Delete</button>
+                        </td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+
+        } catch (error) {
+            console.error("Error loading events:", error);
+            tableBody.innerHTML = `
+                <tr><td colspan="7">Unexpected error while loading events.</td></tr>
+            `;
+        }
+    }
+
+    function formatDate(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleString();
+    }
+
+    function attachEventFormListener() {
+        const form = document.getElementById("eventForm");
+        if (!form) {
+            
+            return;
+        }
+
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            console.log("submit fired");
+
+            const payload = {
+                id: document.getElementById('EventId').value || null,
+                eventName: document.getElementById('EventName').value,
+                eventDescription: document.getElementById('EventDescription').value,
+                eventNotes: document.getElementById('EventNotes').value,
+                eventStartAt: document.getElementById('EventStartAt').value,
+                eventEndAt: document.getElementById('EventEndAt').value,
+                location: document.getElementById('Location').value,
+                hasReminder: document.getElementById('HasReminder').checked
+            };
+
+            
+            const isUpdate = payload.id && payload.id !== "";
+            const url = isUpdate ? '/Event/UpdateEvent' : '/Event/CreateEvent';
+
+            const response = await fetch(url, {
+                method: isUpdate ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert('Saved successfully!');
+                setTimeout(() => location.reload(), 500);
+            } else {
+                alert(result.message);
+            }
+        });
+    }
+
+    async function deleteEvent(id) {
+        if (!confirm("Are you sure you want to delete this event?")) return;
+
+        const response = await fetch(`/Event/DeleteEvent/${id}`, {
+            method: "POST"
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert("Deleted successfully!");
+            loadEvents();
+        } else {
+            alert(result.message || "Delete failed");
+        }
+    }
+
+
+</script>

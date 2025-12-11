@@ -13,6 +13,32 @@ namespace Chronos.Application
             _repo = repo;
         }
 
+        public ApiResponse<EventDto?> Get(Guid id)
+        {
+            try
+            {
+                Event? e = _repo.Get(id);
+                if (e == null) new ApiResponse<EventDto?> { Success = false, Message = "Event doesnt exist." };
+
+                EventDto dto = new()
+                {
+                    EventDescription = e.EventDescription,
+                    EventEndAt = e.EventEndAt,
+                    EventStartAt = e.EventStartAt,
+                    EventName = e.EventName,
+                    Id = e.Id,
+                    EventNotes = e.EventNotes,
+                    HasReminder = e.HasReminder,
+                    Location = e.Location,
+                };
+
+                return new ApiResponse<EventDto?> { Success = true, Data = dto };
+            }
+            catch
+            {
+                return new ApiResponse<EventDto?> { Success = false, Message = "Error occured when getting Event." };
+            }
+        }
         public ApiResponse<string> CreateEvent(CreateEventDto dto)
         {
             try
@@ -52,6 +78,7 @@ namespace Chronos.Application
                     IEnumerable<Event> events = _repo.GetEvent();
                     IEnumerable<EventDto> eventsDto = events.Where(x => x.DeletedAt == null && x.EventStartAt >= start && x.EventEndAt <= end).Select(x => new EventDto
                     {
+                        Id = x.Id,
                         EventName = x.EventName,
                         EventDescription = x.EventDescription,
                         EventEndAt = x.EventEndAt,
@@ -76,6 +103,7 @@ namespace Chronos.Application
                     IEnumerable<Event> events = _repo.GetEvent();
                     IEnumerable<EventDto> eventsDto = events.Where(x => x.DeletedAt == null && x.EventStartAt >= start).Select(x => new EventDto
                     {
+                        Id = x.Id,
                         EventName = x.EventName,
                         EventDescription = x.EventDescription,
                         EventEndAt = x.EventEndAt,
@@ -101,6 +129,7 @@ namespace Chronos.Application
                     IEnumerable<Event> events = _repo.GetEvent();
                     IEnumerable<EventDto> eventsDto = events.Where(x => x.DeletedAt == null && x.EventEndAt <= end).Select(x => new EventDto
                     {
+                        Id = x.Id,
                         EventName = x.EventName,
                         EventDescription = x.EventDescription,
                         EventEndAt = x.EventEndAt,
@@ -121,6 +150,7 @@ namespace Chronos.Application
                 IEnumerable<Event> events = _repo.GetEvent();
                 IEnumerable<EventDto> eventsDto = events.Where(x => x.DeletedAt == null).Select(x => new EventDto
                 {
+                    Id = x.Id,
                     EventName = x.EventName,
                     EventDescription = x.EventDescription,
                     EventEndAt = x.EventEndAt,
@@ -139,12 +169,12 @@ namespace Chronos.Application
             return new ApiResponse<bool> { Success = deleteResult, Message = deleteResult ? "Delete event success" : "Event doesnt exist" };
         }
 
-        public ApiResponse<string> UpdateEvent(Guid id, UpdateEventDto dto)
+        public ApiResponse<string> UpdateEvent(UpdateEventDto dto)
         {
             string validateInputResult = ValidateInput(dto);
             if (validateInputResult != "") return new ApiResponse<string> { Success = false, Message = validateInputResult };
 
-            Event? e = _repo.Get(id);
+            Event? e = _repo.Get((Guid)dto.Id);
             if (e == null) return new ApiResponse<string> { Success = false, Message = "Event doesnt exist" };
             if (e.DeletedAt != null) return new ApiResponse<string> { Success = false, Message = "Event has already deleted" };
 

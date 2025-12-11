@@ -1,0 +1,102 @@
+﻿@model Chronos.DTO.Event.EventBaseDto
+
+<form id="eventForm">
+
+    <input type="hidden" id="EventId" value="@Model?.Id" />
+
+
+    <div class="mb-3">
+        <label asp-for="EventName" class="form-label">Event Name</label>
+        <input asp-for="EventName" id="EventName" class="form-control" required />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="EventDescription" class="form-label">Description</label>
+        <textarea asp-for="EventDescription" id="EventDescription" class="form-control"></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="EventNotes" class="form-label">Notes</label>
+        <textarea asp-for="EventNotes" id="EventNotes" class="form-control"></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="EventStartAt" class="form-label">Start Time</label>
+        <input type="datetime-local"
+               id="EventStartAt"
+               name="EventStartAt"
+               class="form-control"
+               value="@Model.EventStartAt.ToString("yyyy-MM-ddTHH:mm")" />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="EventEndAt" class="form-label">End Time</label>
+        <input type="datetime-local"
+               id="EventEndAt"
+               name="EventEndAt"
+               class="form-control"
+               value="@Model.EventEndAt.ToString("yyyy-MM-ddTHH:mm")" />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Location" class="form-label">Location</label>
+        <input asp-for="Location" id="Location" class="form-control" />
+    </div>
+
+    <div class="form-check mb-3">
+        <input asp-for="HasReminder" id="HasReminder" class="form-check-input" type="checkbox" />
+        <label asp-for="HasReminder" class="form-check-label">Reminder</label>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100">Save</button>
+
+    <div id="alertBox" class="alert d-none mt-3"></div>
+</form>
+
+<script>
+    function showAlert(message, type) {
+        const box = document.getElementById('alertBox');
+        box.className = `alert alert-${type}`;
+        box.innerText = message;
+        box.classList.remove('d-none');
+    }
+
+    // document.getElementById("eventForm").addEventListener("submit", async (e) => {
+    //     e.preventDefault();
+
+    //     const payload = {
+    //         id: document.getElementById('EventId').value || null,
+    //         eventName: document.getElementById('EventName').value,
+    //         eventDescription: document.getElementById('EventDescription').value,
+    //         eventNotes: document.getElementById('EventNotes').value,
+    //         eventStartAt: document.getElementById('EventStartAt').value,
+    //         eventEndAt: document.getElementById('EventEndAt').value,
+    //         location: document.getElementById('Location').value,
+    //         hasReminder: document.getElementById('HasReminder').checked
+    //     };
+
+    //     const isUpdate = payload.id && payload.id !== "0";
+
+    //     const url = isUpdate ? '/Event/UpdateEvent' : '/Event/CreateEvent';
+
+    //     try {
+    //         const response = await fetch(url, {
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json' },
+    //             body: JSON.stringify(payload)
+    //         });
+
+    //         const result = await response.json();
+
+    //         if (result.success) {
+    //             showAlert('🔥 Saved successfully!', 'success');
+    //             setTimeout(() => location.reload(), 700);
+    //         } else {
+    //             showAlert(result.message, 'danger');
+    //         }
+
+    //     } catch {
+    //         showAlert('Server error. Try again.', 'danger');
+    //     }
+    // });
+</script>

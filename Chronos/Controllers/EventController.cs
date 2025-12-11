@@ -15,8 +15,24 @@ namespace Chronos.Controllers
 
         public IActionResult Index()
         {
-            return View("~/Views/Event/_CreateEventForm.cshtml");
+            //return View("~/Views/Event/_CreateEventForm.cshtml");
+            return View();
         }
+
+        [HttpGet("CreatePartial")]
+        public IActionResult CreatePartial()
+        {
+            var dto = new EventDto();
+            return PartialView("_EventForm", dto);
+        }
+
+        [HttpGet("EditPartial/{id}")]
+        public IActionResult EditPartial(Guid id)
+        {
+            var dto = _eventServices.Get(id); // fetch data
+            return PartialView("_EventForm", dto.Data);
+        }
+
 
         [HttpPost("CreateEvent")]
         public IActionResult CreateEvent([FromBody] CreateEventDto dto)
@@ -39,7 +55,7 @@ namespace Chronos.Controllers
             return Json(result);
         }
 
-        [HttpDelete("DeleteEvent")]
+        [HttpPost("DeleteEvent/{id}")]
         public IActionResult DeleteEvent(Guid id)
         {
             var result = _eventServices.DeleteEvent(id);
@@ -47,9 +63,9 @@ namespace Chronos.Controllers
         }
 
         [HttpPut("UpdateEvent")]
-        public IActionResult UpdateEvent(Guid id, [FromBody] UpdateEventDto dto)
+        public IActionResult UpdateEvent([FromBody] UpdateEventDto dto)
         {
-            var result = _eventServices.DeleteEvent(id);
+            var result = _eventServices.UpdateEvent(dto);
             return Json(result);
         }
     }
