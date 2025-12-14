@@ -22,17 +22,7 @@ namespace Chronos.Application
                 Event? e = _repo.Get(id);
                 if (e == null) new ApiResponse<EventDto?> { Success = false, Message = "Event doesnt exist." };
 
-                EventDto dto = new()
-                {
-                    EventDescription = e.EventDescription,
-                    EventEndAt = e.EventEndAt,
-                    EventStartAt = e.EventStartAt,
-                    EventName = e.EventName,
-                    Id = e.Id,
-                    EventNotes = e.EventNotes,
-                    HasReminder = e.HasReminder,
-                    Location = e.Location,
-                };
+                EventDto dto = new(e);
 
                 return new ApiResponse<EventDto?> { Success = true, Data = dto };
             }
