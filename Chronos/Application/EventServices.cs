@@ -1,6 +1,8 @@
 ﻿using Chronos.Common;
 using Chronos.Domain;
 using Chronos.DTO.Event;
+using Chronos.Mapping;
+using Chronos.Validator;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 
 namespace Chronos.Application
@@ -44,11 +46,12 @@ namespace Chronos.Application
             try
             {
                 //Check for inputs
-                string validateInputResult = ValidateInput(dto);
+                string validateInputResult = EventValidator.ValidateInput(dto);
                 if (validateInputResult != "") return new ApiResponse<string> { Success = false, Message = validateInputResult };
 
                 //Mapping
-                Event e = Mapping(dto);
+                Event e = EventMapping.MappingToEntity(dto);
+                e.CreatedAt = DateTime.Now;
 
                 //Domain validation
                 if (!e.ValidateDate()) return new ApiResponse<string> { Success = false, Message = "Invalid date, date cannot be yesterday." };
@@ -67,100 +70,59 @@ namespace Chronos.Application
 
         public ApiResponse<IEnumerable<EventDto>> GetEvents(string? startDate, string? endDate)
         {
+            DateTime? start = null;
+            DateTime? end = null;
 
-            if (!string.IsNullOrEmpty(startDate) && !string.IsNullOrEmpty(endDate))
+            DateTime parsedStart;
+            DateTime parsedEnd;
+
+
+            //Check date time formatting 
+            if (!string.IsNullOrWhiteSpace(startDate))
             {
-                try
+                if (!DateTime.TryParse(startDate, out parsedStart))
                 {
-                    DateTime start = Convert.ToDateTime(startDate);
-                    DateTime end = Convert.ToDateTime(endDate);
-
-                    IEnumerable<Event> events = _repo.GetEvent();
-                    IEnumerable<EventDto> eventsDto = events.Where(x => x.DeletedAt == null && x.EventStartAt >= start && x.EventEndAt <= end).Select(x => new EventDto
+                    return new ApiResponse<IEnumerable<EventDto>>
                     {
-                        Id = x.Id,
-                        EventName = x.EventName,
-                        EventDescription = x.EventDescription,
-                        EventEndAt = x.EventEndAt,
-                        EventStartAt = x.EventStartAt,
-                        EventNotes = x.EventNotes,
-                        Location = x.Location,
-                    });
+                        Success = false,
+                        Message = "Invalid startDate format. Use dd-MM-yyyy"
+                    };
+                }
 
-                    return new ApiResponse<IEnumerable<EventDto>> { Success = true, Data = eventsDto };
-                }
-                catch
-                {
-                    return new ApiResponse<IEnumerable<EventDto>> { Success = false, Message = "Invalid date format. Please use (yyyy-MM-dd)" };
-                }
+                start = parsedStart;
             }
-            else if (!string.IsNullOrEmpty(startDate))
-            {
-                try
-                {
-                    DateTime start = Convert.ToDateTime(startDate);
 
-                    IEnumerable<Event> events = _repo.GetEvent();
-                    IEnumerable<EventDto> eventsDto = events.Where(x => x.DeletedAt == null && x.EventStartAt >= start).Select(x => new EventDto
+            if (!string.IsNullOrWhiteSpace(endDate))
+            {
+                if (!DateTime.TryParse(endDate, out parsedEnd))
+                {
+                    return new ApiResponse<IEnumerable<EventDto>>
                     {
-                        Id = x.Id,
-                        EventName = x.EventName,
-                        EventDescription = x.EventDescription,
-                        EventEndAt = x.EventEndAt,
-                        EventStartAt = x.EventStartAt,
-                        EventNotes = x.EventNotes,
-                        Location = x.Location,
-                    });
+                        Success = false,
+                        Message = "Invalid endDate format. Use dd-MM-yyyy"
+                    };
+                }
 
-                    return new ApiResponse<IEnumerable<EventDto>> { Success = true, Data = eventsDto };
-                }
-                catch
-                {
-                    return new ApiResponse<IEnumerable<EventDto>> { Success = false, Message = "Invalid date format. Please use (yyyy-MM-dd)" };
-                }
+                end = parsedEnd;
             }
-            else if (!string.IsNullOrEmpty(endDate))
+            
+            IEnumerable<Event> events = _repo.GetEvent().Where(x => x.DeletedAt == null);
+            IEnumerable<EventDto> eventsDto = events.Select(x => new EventDto(x));
+
+            if (start.HasValue && end.HasValue)
             {
-
-                try
-                {
-                    DateTime end = Convert.ToDateTime(endDate);
-
-                    IEnumerable<Event> events = _repo.GetEvent();
-                    IEnumerable<EventDto> eventsDto = events.Where(x => x.DeletedAt == null && x.EventEndAt <= end).Select(x => new EventDto
-                    {
-                        Id = x.Id,
-                        EventName = x.EventName,
-                        EventDescription = x.EventDescription,
-                        EventEndAt = x.EventEndAt,
-                        EventStartAt = x.EventStartAt,
-                        EventNotes = x.EventNotes,
-                        Location = x.Location,
-                    });
-
-                    return new ApiResponse<IEnumerable<EventDto>> { Success = true, Data = eventsDto };
-                }
-                catch
-                {
-                    return new ApiResponse<IEnumerable<EventDto>> { Success = false, Message = "Invalid date format. Please use (yyyy-MM-dd)" };
-                }
+                eventsDto = events.Where(x => x.EventStartAt >= start && x.EventEndAt <= end).Select(x => new EventDto(x));
             }
-            else
+            else if (start.HasValue)
             {
-                IEnumerable<Event> events = _repo.GetEvent();
-                IEnumerable<EventDto> eventsDto = events.Where(x => x.DeletedAt == null).Select(x => new EventDto
-                {
-                    Id = x.Id,
-                    EventName = x.EventName,
-                    EventDescription = x.EventDescription,
-                    EventEndAt = x.EventEndAt,
-                    EventStartAt = x.EventStartAt,
-                    EventNotes = x.EventNotes,
-                    Location = x.Location,
-                });
-
-                return new ApiResponse<IEnumerable<EventDto>> { Success = true, Data = eventsDto };
+                eventsDto = events.Where(x => x.EventStartAt >= start).Select(x => new EventDto(x));
             }
+            else if (end.HasValue)
+            {
+                eventsDto = events.Where(x => x.EventEndAt <= end).Select(x => new EventDto(x));
+            }
+
+            return new ApiResponse<IEnumerable<EventDto>> { Success = true, Data = eventsDto };
         }
 
         public ApiResponse<bool> DeleteEvent(Guid id)
@@ -171,21 +133,15 @@ namespace Chronos.Application
 
         public ApiResponse<string> UpdateEvent(UpdateEventDto dto)
         {
-            string validateInputResult = ValidateInput(dto);
+            string validateInputResult = EventValidator.ValidateInput(dto);
             if (validateInputResult != "") return new ApiResponse<string> { Success = false, Message = validateInputResult };
 
             Event? e = _repo.Get((Guid)dto.Id);
             if (e == null) return new ApiResponse<string> { Success = false, Message = "Event doesnt exist" };
             if (e.DeletedAt != null) return new ApiResponse<string> { Success = false, Message = "Event has already deleted" };
 
-
-            e.EventName = dto.EventName;
-            e.EventDescription = dto.EventDescription;
-            e.EventNotes = dto.EventNotes;
-            e.EventStartAt = dto.EventStartAt;
-            e.EventEndAt = dto.EventEndAt;
-            e.Location = dto.Location;
-            e.HasReminder = dto.HasReminder;
+            e = EventMapping.MappingToEntity(dto);
+            e.Id = (Guid)dto.Id;
 
             if (!e.ValidateDate()) return new ApiResponse<string> { Success = false, Message = "Invalid date, date cannot be yesterday." };
 
@@ -196,23 +152,6 @@ namespace Chronos.Application
 
         public ApiResponse<bool> CheckOverlapEvent(Guid id, UpdateEventDto dto)
         {
-            //IEnumerable<Event> events = _repo.GetEvent();
-            //if (events.Where(x => x.Id != id
-            // && dto.EventStartAt < x.EventStartAt && dto.EventStartAt > x.EventEndAt && x.DeletedAt == null).Any())
-            //    return new ApiResponse<bool>
-            //    {
-            //        Success = true,
-            //        Message = "Overlapping event exist. Continue?",
-            //        Data = true
-            //    };
-
-            //return new ApiResponse<bool>
-            //{
-            //    Success = true,
-            //    Message = "",
-            //    Data = false
-            //};
-
             var events = _repo.GetEvent()
                 .Where(x => x.Id != id && x.DeletedAt == null);
 
@@ -227,31 +166,6 @@ namespace Chronos.Application
                 Message = isOverlapping ? "Overlapping event exists. Continue?" : "",
                 Data = !isOverlapping
             };
-        }
-
-        /**/
-        public string ValidateInput(EventBaseDto dto)
-        {
-            if (string.IsNullOrEmpty(dto.EventName)) return "Event Name cannot be empty.";
-            if (dto.EventStartAt >= dto.EventEndAt) return "Invalid date, date start greater than date end.";
-
-            return "";
-        }
-
-        public Event Mapping(CreateEventDto dto)
-        {
-            Event e = new()
-            {
-                EventName = dto.EventName,
-                EventStartAt = dto.EventStartAt,
-                EventEndAt = dto.EventEndAt,
-                EventDescription = dto.EventDescription,
-                EventNotes = dto.EventNotes,
-                Location = dto.Location,
-                HasReminder = dto.HasReminder,
-                CreatedAt = DateTime.Now,
-            };
-            return e;
         }
     }
 }
